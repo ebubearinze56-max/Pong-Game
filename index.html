@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classic Pong Game - Fixed Version</title>
+    <title>Classic Pong Game</title>
     <style>
         * {
             margin: 0;
@@ -243,8 +243,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>CLASSIC PONG - FIXED VERSION</h1>
-        <p class="subtitle">Now with proper ball physics and collision detection!</p>
+        <h1>CLASSIC PONG</h1>
+        <p class="subtitle">The timeless arcade game - Control your paddle and beat the computer!</p>
     </div>
     
     <div class="score-board">
@@ -321,13 +321,13 @@
         let animationFrameId = null;
         
         // Game objects
-        const paddleWidth = 12;
-        const paddleHeight = 100;
-        const ballSize = 12;
+        const paddleWidth = 10;
+        const paddleHeight = 80;
+        const ballSize = 10;
         
         // Player paddle
         const playerPaddle = {
-            x: 20,
+            x: 10,
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
@@ -337,7 +337,7 @@
         
         // Computer paddle
         const computerPaddle = {
-            x: canvas.width - paddleWidth - 20,
+            x: canvas.width - paddleWidth - 10,
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
@@ -352,7 +352,7 @@
             size: ballSize,
             speed: 6,
             velocityX: 5,
-            velocityY: 3,
+            velocityY: 5,
             color: '#ffffff'
         };
         
@@ -361,7 +361,9 @@
             ArrowUp: false,
             ArrowDown: false,
             w: false,
-            s: false
+            W: false,
+            s: false,
+            S: false
         };
         
         // Draw a rectangle (used for paddles)
@@ -371,7 +373,7 @@
             
             // Add border
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1;
             ctx.strokeRect(x, y, width, height);
         }
         
@@ -385,7 +387,7 @@
             
             // Ball highlight
             ctx.beginPath();
-            ctx.arc(x - size/3, y - size/3, size/3, 0, Math.PI * 2);
+            ctx.arc(x - size/3, y - size/3, size/4, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.fill();
         }
@@ -404,8 +406,8 @@
         
         // Draw the scores on the canvas
         function drawScores() {
-            ctx.font = 'bold 60px Arial';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.font = '60px Arial';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
             ctx.textAlign = 'center';
             ctx.fillText(playerScore, canvas.width / 4, 70);
             ctx.fillText(computerScore, 3 * canvas.width / 4, 70);
@@ -429,13 +431,6 @@
             
             // Draw the ball
             drawBall(ball.x, ball.y, ball.size, ball.color);
-            
-            // Draw debug info (remove in production)
-            ctx.font = '12px Arial';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'left';
-            ctx.fillText(`Ball: (${ball.x.toFixed(1)}, ${ball.y.toFixed(1)})`, 10, 20);
-            ctx.fillText(`Velocity: (${ball.velocityX.toFixed(1)}, ${ball.velocityY.toFixed(1)})`, 10, 35);
         }
         
         // Update game objects
@@ -449,67 +444,42 @@
             // Ball collision with top and bottom walls
             if (ball.y + ball.size > canvas.height || ball.y - ball.size < 0) {
                 ball.velocityY = -ball.velocityY;
-                // Adjust position to prevent sticking
-                if (ball.y - ball.size < 0) ball.y = ball.size;
-                if (ball.y + ball.size > canvas.height) ball.y = canvas.height - ball.size;
             }
             
-            // Ball collision detection with player paddle
-            let playerPaddleRight = playerPaddle.x + playerPaddle.width;
-            let playerPaddleTop = playerPaddle.y;
-            let playerPaddleBottom = playerPaddle.y + playerPaddle.height;
-            
-            // Check if ball is within paddle's vertical range and hitting from left side
-            if (ball.x - ball.size < playerPaddleRight && 
-                ball.x + ball.size > playerPaddle.x &&
-                ball.y > playerPaddleTop && 
-                ball.y < playerPaddleBottom) {
+            // Ball collision with player paddle
+            if (ball.x - ball.size < playerPaddle.x + playerPaddle.width &&
+                ball.y > playerPaddle.y && 
+                ball.y < playerPaddle.y + playerPaddle.height) {
                 
-                // Calculate relative hit position (from -1 to 1)
-                let hitPosition = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (playerPaddle.height / 2);
-                
-                // Calculate angle based on hit position (more extreme angles for edge hits)
-                let angle = hitPosition * (Math.PI / 3); // 60 degree maximum angle
+                // Calculate bounce angle based on where the ball hit the paddle
+                let hitPoint = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (paddleHeight / 2);
+                let angle = hitPoint * (Math.PI / 4); // Maximum 45 degree angle
                 
                 // Calculate new velocity
                 let speed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
-                ball.velocityX = Math.cos(angle) * speed * 1.05; // Slight speed increase
-                ball.velocityY = Math.sin(angle) * speed * 1.05;
+                ball.velocityX = Math.cos(angle) * speed * 1.1; // Increase speed slightly
+                ball.velocityY = Math.sin(angle) * speed * 1.1;
                 
-                // Make sure ball moves to the right after hitting player paddle
+                // Make sure the ball moves to the right
                 ball.velocityX = Math.abs(ball.velocityX);
-                
-                // Adjust ball position to prevent sticking
-                ball.x = playerPaddleRight + ball.size;
             }
             
-            // Ball collision detection with computer paddle
-            let computerPaddleLeft = computerPaddle.x;
-            let computerPaddleTop = computerPaddle.y;
-            let computerPaddleBottom = computerPaddle.y + computerPaddle.height;
-            
-            // Check if ball is within paddle's vertical range and hitting from right side
-            if (ball.x + ball.size > computerPaddleLeft && 
-                ball.x - ball.size < computerPaddle.x + computerPaddle.width &&
-                ball.y > computerPaddleTop && 
-                ball.y < computerPaddleBottom) {
+            // Ball collision with computer paddle
+            if (ball.x + ball.size > computerPaddle.x &&
+                ball.y > computerPaddle.y && 
+                ball.y < computerPaddle.y + computerPaddle.height) {
                 
-                // Calculate relative hit position (from -1 to 1)
-                let hitPosition = (ball.y - (computerPaddle.y + computerPaddle.height / 2)) / (computerPaddle.height / 2);
-                
-                // Calculate angle based on hit position
-                let angle = hitPosition * (Math.PI / 3); // 60 degree maximum angle
+                // Calculate bounce angle based on where the ball hit the paddle
+                let hitPoint = (ball.y - (computerPaddle.y + computerPaddle.height / 2)) / (paddleHeight / 2);
+                let angle = hitPoint * (Math.PI / 4); // Maximum 45 degree angle
                 
                 // Calculate new velocity
                 let speed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
-                ball.velocityX = Math.cos(angle) * speed * 1.05; // Slight speed increase
-                ball.velocityY = Math.sin(angle) * speed * 1.05;
+                ball.velocityX = -Math.cos(angle) * speed * 1.1; // Increase speed slightly
+                ball.velocityY = Math.sin(angle) * speed * 1.1;
                 
-                // Make sure ball moves to the left after hitting computer paddle
+                // Make sure the ball moves to the left
                 ball.velocityX = -Math.abs(ball.velocityX);
-                
-                // Adjust ball position to prevent sticking
-                ball.x = computerPaddleLeft - ball.size;
             }
             
             // Update computer paddle based on difficulty
@@ -539,36 +509,28 @@
             // Adjust computer speed based on difficulty
             let speedMultiplier = 1;
             switch(difficulty) {
-                case 'easy': speedMultiplier = 0.6; break;
-                case 'medium': speedMultiplier = 0.9; break;
-                case 'hard': speedMultiplier = 1.2; break;
-                case 'insane': speedMultiplier = 1.5; break;
+                case 'easy': speedMultiplier = 0.7; break;
+                case 'medium': speedMultiplier = 1.0; break;
+                case 'hard': speedMultiplier = 1.3; break;
+                case 'insane': speedMultiplier = 1.6; break;
             }
             
-            // Simple AI - computer follows the ball with some prediction
+            // Simple AI - computer follows the ball
             let computerPaddleCenter = computerPaddle.y + computerPaddle.height / 2;
-            let targetY = ball.y;
             
-            // Add prediction based on ball velocity
-            if (ball.velocityX > 0) { // Ball moving toward computer
-                let timeToReach = (computerPaddle.x - ball.x) / ball.velocityX;
-                targetY = ball.y + (ball.velocityY * timeToReach);
-                
-                // Add imperfection based on difficulty
-                let imperfection = 0;
-                switch(difficulty) {
-                    case 'easy': imperfection = 40; break;
-                    case 'medium': imperfection = 25; break;
-                    case 'hard': imperfection = 10; break;
-                    case 'insane': imperfection = 5; break;
-                }
-                targetY += (Math.random() - 0.5) * imperfection;
+            // Add some delay based on difficulty to make it beatable
+            let reactionDelay = 0;
+            switch(difficulty) {
+                case 'easy': reactionDelay = 0.3; break;
+                case 'medium': reactionDelay = 0.2; break;
+                case 'hard': reactionDelay = 0.1; break;
+                case 'insane': reactionDelay = 0.05; break;
             }
             
-            // Move computer paddle toward target
-            if (computerPaddleCenter < targetY - 10) {
+            // Move computer paddle toward the ball
+            if (computerPaddleCenter < ball.y - reactionDelay * 100) {
                 computerPaddle.y += computerPaddle.speed * speedMultiplier;
-            } else if (computerPaddleCenter > targetY + 10) {
+            } else if (computerPaddleCenter > ball.y + reactionDelay * 100) {
                 computerPaddle.y -= computerPaddle.speed * speedMultiplier;
             }
             
@@ -582,10 +544,10 @@
         // Update player paddle based on key presses
         function updatePlayerPaddle() {
             // Move player paddle based on key presses
-            if (keys.ArrowUp || keys.w) {
+            if (keys.ArrowUp || keys.w || keys.W) {
                 playerPaddle.y -= playerPaddle.speed;
             }
-            if (keys.ArrowDown || keys.s) {
+            if (keys.ArrowDown || keys.s || keys.S) {
                 playerPaddle.y += playerPaddle.speed;
             }
             
@@ -601,21 +563,9 @@
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
             
-            // Randomize the starting direction
-            // Determine who serves based on who was scored on
-            let serveToRight = (playerScore > computerScore);
-            
-            // Random angle between -45 and 45 degrees
-            let angle = (Math.random() * Math.PI / 2) - Math.PI / 4;
-            
-            // Set velocity based on angle
-            ball.velocityX = serveToRight ? ball.speed * Math.cos(angle) : -ball.speed * Math.cos(angle);
-            ball.velocityY = ball.speed * Math.sin(angle);
-            
-            // Ensure minimum horizontal velocity
-            if (Math.abs(ball.velocityX) < 3) {
-                ball.velocityX = ball.velocityX < 0 ? -3 : 3;
-            }
+            // Randomize the starting direction (always starts toward player who was just scored on)
+            ball.velocityX = (computerScore > playerScore ? 1 : -1) * ball.speed;
+            ball.velocityY = (Math.random() * 2 - 1) * ball.speed;
         }
         
         // Check if the game is over
@@ -742,11 +692,8 @@
         
         // Keyboard input handling
         document.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            if (key === 'arrowup' || key === 'arrowdown' || key === 'w' || key === 's') {
-                keys[key === 'arrowup' ? 'ArrowUp' : 
-                      key === 'arrowdown' ? 'ArrowDown' : 
-                      key] = true;
+            if (e.key in keys) {
+                keys[e.key] = true;
             }
             
             // Toggle pause with spacebar
@@ -757,21 +704,22 @@
         });
         
         document.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            if (key === 'arrowup' || key === 'arrowdown' || key === 'w' || key === 's') {
-                keys[key === 'arrowup' ? 'ArrowUp' : 
-                      key === 'arrowdown' ? 'ArrowDown' : 
-                      key] = false;
+            if (e.key in keys) {
+                keys[e.key] = false;
             }
         });
         
         // Button event listeners
         startBtn.addEventListener('click', startGame);
+        
         pauseBtn.addEventListener('click', pauseGame);
+        
         resetBtn.addEventListener('click', resetGame);
         
         difficultySelect.addEventListener('change', function() {
-            applyDifficultySettings();
+            if (gameRunning) {
+                applyDifficultySettings();
+            }
         });
         
         messageButton.addEventListener('click', function() {
