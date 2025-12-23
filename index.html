@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classic Pong Game</title>
+    <title>Classic Pong Game - Dual Controls</title>
     <style>
         * {
             margin: 0;
@@ -21,6 +21,7 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
             padding: 20px;
+            overflow-x: hidden;
         }
         
         .header {
@@ -57,6 +58,7 @@
             border-radius: 8px;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
             border: 2px solid #00ffcc;
+            max-height: 70vh;
         }
         
         .score-board {
@@ -117,6 +119,9 @@
             font-weight: bold;
             transition: all 0.3s;
             box-shadow: 0 4px 0 #009973;
+            min-width: 120px;
+            min-height: 50px;
+            touch-action: manipulation;
         }
         
         .btn:hover {
@@ -138,6 +143,56 @@
         .btn-reset:hover {
             background-color: #ffaa80;
             box-shadow: 0 6px 0 #cc7852;
+        }
+        
+        /* Mobile Touch Controls */
+        .mobile-controls {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            z-index: 5;
+            touch-action: manipulation;
+        }
+        
+        .touch-btn {
+            width: 80px;
+            height: 80px;
+            margin: 10px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            background-color: rgba(0, 255, 204, 0.8);
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .touch-btn:active {
+            background-color: rgba(0, 255, 204, 1);
+            transform: scale(0.95);
+        }
+        
+        /* Show mobile controls ONLY on touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            .mobile-controls {
+                display: block;
+            }
+            
+            canvas {
+                max-height: 60vh;
+            }
+            
+            .btn {
+                min-width: 140px;
+                min-height: 60px;
+                font-size: 1.2rem;
+            }
         }
         
         .instructions {
@@ -218,6 +273,22 @@
             border: 1px solid #00ffcc;
         }
         
+        .control-info {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #a0e7ff;
+        }
+        
+        .desktop-controls, .mobile-controls-info {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+        
         @media (max-width: 850px) {
             .controls {
                 flex-direction: column;
@@ -238,13 +309,35 @@
                 justify-content: center;
                 padding: 10px 0;
             }
+            
+            .control-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+        
+        @media (max-width: 500px) {
+            .touch-btn {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+            
+            .mobile-controls {
+                left: 15px;
+                bottom: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>CLASSIC PONG</h1>
-        <p class="subtitle">The timeless arcade game - Control your paddle and beat the computer!</p>
+        <p class="subtitle">Dual Controls: Keyboard for Desktop | Touch for Mobile</p>
     </div>
     
     <div class="score-board">
@@ -261,6 +354,14 @@
     
     <div class="game-container">
         <canvas id="pongCanvas" width="800" height="400"></canvas>
+        
+        <!-- Mobile Touch Controls - Auto shows on mobile devices -->
+        <div class="mobile-controls">
+            <div class="touch-buttons-left">
+                <button class="touch-btn up-btn" id="playerUpBtn">↑</button>
+                <button class="touch-btn down-btn" id="playerDownBtn">↓</button>
+            </div>
+        </div>
         
         <div class="game-message" id="gameMessage">
             <h3 id="messageTitle">Game Paused</h3>
@@ -285,19 +386,28 @@
         <button class="btn btn-reset" id="resetBtn">Reset Game</button>
     </div>
     
+    <div class="control-info">
+        <div class="desktop-controls">
+            <strong>Desktop Controls:</strong> Use ARROW KEYS or W/S keys
+        </div>
+        <div class="mobile-controls-info">
+            <strong>Mobile Controls:</strong> Use the touch buttons on screen
+        </div>
+    </div>
+    
     <div class="instructions">
         <h2>How to Play</h2>
         <ul>
-            <li>Move your paddle UP and DOWN using the <strong>Arrow Keys</strong> or <strong>W/S Keys</strong></li>
+            <li><strong>Desktop:</strong> Move paddle with ARROW KEYS or W/S keys</li>
+            <li><strong>Mobile:</strong> Use the touch buttons on screen to move paddle</li>
+            <li><strong>Both:</strong> Press SPACE or pause button to pause/resume</li>
             <li>First player to score 7 points wins the game</li>
-            <li>Press <strong>SPACE</strong> to pause/resume the game</li>
             <li>Change difficulty to make the game easier or harder</li>
-            <li>Try to bounce the ball at angles to make it harder for the computer</li>
         </ul>
     </div>
 
     <script>
-        // Game elements
+        // ===== GAME ELEMENTS =====
         const canvas = document.getElementById('pongCanvas');
         const ctx = canvas.getContext('2d');
         const playerScoreElement = document.getElementById('player-score');
@@ -310,8 +420,12 @@
         const messageText = document.getElementById('messageText');
         const messageButton = document.getElementById('messageButton');
         const difficultySelect = document.getElementById('difficulty');
+        
+        // Touch button elements
+        const playerUpBtn = document.getElementById('playerUpBtn');
+        const playerDownBtn = document.getElementById('playerDownBtn');
 
-        // Game variables
+        // ===== GAME VARIABLES =====
         let gameRunning = false;
         let gamePaused = false;
         let playerScore = 0;
@@ -320,14 +434,27 @@
         let difficulty = 'medium';
         let animationFrameId = null;
         
-        // Game objects
-        const paddleWidth = 10;
-        const paddleHeight = 80;
-        const ballSize = 10;
+        // ===== DUAL CONTROL VARIABLES =====
+        // Keyboard controls
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            w: false,
+            s: false
+        };
+        
+        // Touch controls
+        let playerMovingUp = false;
+        let playerMovingDown = false;
+
+        // ===== GAME OBJECTS =====
+        const paddleWidth = 12;
+        const paddleHeight = 100;
+        const ballSize = 12;
         
         // Player paddle
         const playerPaddle = {
-            x: 10,
+            x: 20,
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
@@ -337,7 +464,7 @@
         
         // Computer paddle
         const computerPaddle = {
-            x: canvas.width - paddleWidth - 10,
+            x: canvas.width - paddleWidth - 20,
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
@@ -352,47 +479,32 @@
             size: ballSize,
             speed: 6,
             velocityX: 5,
-            velocityY: 5,
+            velocityY: 3,
             color: '#ffffff'
         };
         
-        // Keyboard input handling
-        const keys = {
-            ArrowUp: false,
-            ArrowDown: false,
-            w: false,
-            W: false,
-            s: false,
-            S: false
-        };
-        
-        // Draw a rectangle (used for paddles)
+        // ===== DRAWING FUNCTIONS =====
         function drawRect(x, y, width, height, color) {
             ctx.fillStyle = color;
             ctx.fillRect(x, y, width, height);
             
-            // Add border
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 2;
             ctx.strokeRect(x, y, width, height);
         }
         
-        // Draw the ball
         function drawBall(x, y, size, color) {
-            // Main ball
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
             
-            // Ball highlight
             ctx.beginPath();
-            ctx.arc(x - size/3, y - size/3, size/4, 0, Math.PI * 2);
+            ctx.arc(x - size/3, y - size/3, size/3, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.fill();
         }
         
-        // Draw the center line
         function drawCenterLine() {
             ctx.beginPath();
             ctx.setLineDash([5, 15]);
@@ -404,99 +516,161 @@
             ctx.setLineDash([]);
         }
         
-        // Draw the scores on the canvas
         function drawScores() {
-            ctx.font = '60px Arial';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.font = 'bold 60px Arial';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.textAlign = 'center';
             ctx.fillText(playerScore, canvas.width / 4, 70);
             ctx.fillText(computerScore, 3 * canvas.width / 4, 70);
         }
         
-        // Draw everything on the canvas
         function draw() {
-            // Clear the canvas
             ctx.fillStyle = '#0f3460';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw the center line
             drawCenterLine();
-            
-            // Draw the scores
             drawScores();
             
-            // Draw the paddles
             drawRect(playerPaddle.x, playerPaddle.y, playerPaddle.width, playerPaddle.height, playerPaddle.color);
             drawRect(computerPaddle.x, computerPaddle.y, computerPaddle.width, computerPaddle.height, computerPaddle.color);
             
-            // Draw the ball
             drawBall(ball.x, ball.y, ball.size, ball.color);
         }
         
-        // Update game objects
+        // ===== DUAL CONTROL SYSTEM =====
+        // Keyboard Event Listeners (Desktop)
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            
+            if (key === 'arrowup' || key === 'w') {
+                keys[key === 'arrowup' ? 'ArrowUp' : 'w'] = true;
+            }
+            if (key === 'arrowdown' || key === 's') {
+                keys[key === 'arrowdown' ? 'ArrowDown' : 's'] = true;
+            }
+            
+            if (e.key === ' ' && gameRunning) {
+                e.preventDefault();
+                pauseGame();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            
+            if (key === 'arrowup' || key === 'w') {
+                keys[key === 'arrowup' ? 'ArrowUp' : 'w'] = false;
+            }
+            if (key === 'arrowdown' || key === 's') {
+                keys[key === 'arrowdown' ? 'ArrowDown' : 's'] = false;
+            }
+        });
+        
+        // Touch Event Listeners (Mobile)
+        playerUpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playerMovingUp = true;
+            playerMovingDown = false;
+        });
+        
+        playerDownBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playerMovingDown = true;
+            playerMovingUp = false;
+        });
+        
+        playerUpBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            playerMovingUp = false;
+        });
+        
+        playerDownBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            playerMovingDown = false;
+        });
+        
+        // Mouse events for testing on desktop
+        playerUpBtn.addEventListener('mousedown', () => {
+            playerMovingUp = true;
+            playerMovingDown = false;
+        });
+        
+        playerDownBtn.addEventListener('mousedown', () => {
+            playerMovingDown = true;
+            playerMovingUp = false;
+        });
+        
+        playerUpBtn.addEventListener('mouseup', () => {
+            playerMovingUp = false;
+        });
+        
+        playerDownBtn.addEventListener('mouseup', () => {
+            playerMovingDown = false;
+        });
+        
+        // ===== GAME LOGIC =====
         function update() {
             if (!gameRunning || gamePaused) return;
             
-            // Move the ball
             ball.x += ball.velocityX;
             ball.y += ball.velocityY;
             
             // Ball collision with top and bottom walls
             if (ball.y + ball.size > canvas.height || ball.y - ball.size < 0) {
                 ball.velocityY = -ball.velocityY;
+                if (ball.y - ball.size < 0) ball.y = ball.size;
+                if (ball.y + ball.size > canvas.height) ball.y = canvas.height - ball.size;
             }
             
             // Ball collision with player paddle
-            if (ball.x - ball.size < playerPaddle.x + playerPaddle.width &&
-                ball.y > playerPaddle.y && 
-                ball.y < playerPaddle.y + playerPaddle.height) {
+            let playerPaddleRight = playerPaddle.x + playerPaddle.width;
+            let playerPaddleTop = playerPaddle.y;
+            let playerPaddleBottom = playerPaddle.y + playerPaddle.height;
+            
+            if (ball.x - ball.size < playerPaddleRight && 
+                ball.x + ball.size > playerPaddle.x &&
+                ball.y > playerPaddleTop && 
+                ball.y < playerPaddleBottom) {
                 
-                // Calculate bounce angle based on where the ball hit the paddle
-                let hitPoint = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (paddleHeight / 2);
-                let angle = hitPoint * (Math.PI / 4); // Maximum 45 degree angle
+                let hitPosition = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (playerPaddle.height / 2);
+                let angle = hitPosition * (Math.PI / 3);
                 
-                // Calculate new velocity
                 let speed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
-                ball.velocityX = Math.cos(angle) * speed * 1.1; // Increase speed slightly
-                ball.velocityY = Math.sin(angle) * speed * 1.1;
-                
-                // Make sure the ball moves to the right
+                ball.velocityX = Math.cos(angle) * speed * 1.05;
+                ball.velocityY = Math.sin(angle) * speed * 1.05;
                 ball.velocityX = Math.abs(ball.velocityX);
+                ball.x = playerPaddleRight + ball.size;
             }
             
             // Ball collision with computer paddle
-            if (ball.x + ball.size > computerPaddle.x &&
-                ball.y > computerPaddle.y && 
-                ball.y < computerPaddle.y + computerPaddle.height) {
+            let computerPaddleLeft = computerPaddle.x;
+            let computerPaddleTop = computerPaddle.y;
+            let computerPaddleBottom = computerPaddle.y + computerPaddle.height;
+            
+            if (ball.x + ball.size > computerPaddleLeft && 
+                ball.x - ball.size < computerPaddle.x + computerPaddle.width &&
+                ball.y > computerPaddleTop && 
+                ball.y < computerPaddleBottom) {
                 
-                // Calculate bounce angle based on where the ball hit the paddle
-                let hitPoint = (ball.y - (computerPaddle.y + computerPaddle.height / 2)) / (paddleHeight / 2);
-                let angle = hitPoint * (Math.PI / 4); // Maximum 45 degree angle
+                let hitPosition = (ball.y - (computerPaddle.y + computerPaddle.height / 2)) / (computerPaddle.height / 2);
+                let angle = hitPosition * (Math.PI / 3);
                 
-                // Calculate new velocity
                 let speed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
-                ball.velocityX = -Math.cos(angle) * speed * 1.1; // Increase speed slightly
-                ball.velocityY = Math.sin(angle) * speed * 1.1;
-                
-                // Make sure the ball moves to the left
+                ball.velocityX = Math.cos(angle) * speed * 1.05;
+                ball.velocityY = Math.sin(angle) * speed * 1.05;
                 ball.velocityX = -Math.abs(ball.velocityX);
+                ball.x = computerPaddleLeft - ball.size;
             }
             
-            // Update computer paddle based on difficulty
             updateComputerPaddle();
-            
-            // Update player paddle based on key presses
             updatePlayerPaddle();
             
-            // Check for scoring
             if (ball.x - ball.size < 0) {
-                // Computer scores
                 computerScore++;
                 computerScoreElement.textContent = computerScore;
                 resetBall();
                 checkGameOver();
             } else if (ball.x + ball.size > canvas.width) {
-                // Player scores
                 playerScore++;
                 playerScoreElement.textContent = playerScore;
                 resetBall();
@@ -504,71 +678,75 @@
             }
         }
         
-        // Update computer paddle based on ball position and difficulty
-        function updateComputerPaddle() {
-            // Adjust computer speed based on difficulty
-            let speedMultiplier = 1;
-            switch(difficulty) {
-                case 'easy': speedMultiplier = 0.7; break;
-                case 'medium': speedMultiplier = 1.0; break;
-                case 'hard': speedMultiplier = 1.3; break;
-                case 'insane': speedMultiplier = 1.6; break;
-            }
-            
-            // Simple AI - computer follows the ball
-            let computerPaddleCenter = computerPaddle.y + computerPaddle.height / 2;
-            
-            // Add some delay based on difficulty to make it beatable
-            let reactionDelay = 0;
-            switch(difficulty) {
-                case 'easy': reactionDelay = 0.3; break;
-                case 'medium': reactionDelay = 0.2; break;
-                case 'hard': reactionDelay = 0.1; break;
-                case 'insane': reactionDelay = 0.05; break;
-            }
-            
-            // Move computer paddle toward the ball
-            if (computerPaddleCenter < ball.y - reactionDelay * 100) {
-                computerPaddle.y += computerPaddle.speed * speedMultiplier;
-            } else if (computerPaddleCenter > ball.y + reactionDelay * 100) {
-                computerPaddle.y -= computerPaddle.speed * speedMultiplier;
-            }
-            
-            // Keep computer paddle within canvas bounds
-            if (computerPaddle.y < 0) computerPaddle.y = 0;
-            if (computerPaddle.y + computerPaddle.height > canvas.height) {
-                computerPaddle.y = canvas.height - computerPaddle.height;
-            }
-        }
-        
-        // Update player paddle based on key presses
         function updatePlayerPaddle() {
-            // Move player paddle based on key presses
-            if (keys.ArrowUp || keys.w || keys.W) {
+            // DUAL CONTROLS: Both keyboard AND touch inputs work
+            if (keys.ArrowUp || keys.w || playerMovingUp) {
                 playerPaddle.y -= playerPaddle.speed;
             }
-            if (keys.ArrowDown || keys.s || keys.S) {
+            
+            if (keys.ArrowDown || keys.s || playerMovingDown) {
                 playerPaddle.y += playerPaddle.speed;
             }
             
-            // Keep player paddle within canvas bounds
             if (playerPaddle.y < 0) playerPaddle.y = 0;
             if (playerPaddle.y + playerPaddle.height > canvas.height) {
                 playerPaddle.y = canvas.height - playerPaddle.height;
             }
         }
         
-        // Reset the ball to the center
+        function updateComputerPaddle() {
+            let speedMultiplier = 1;
+            switch(difficulty) {
+                case 'easy': speedMultiplier = 0.6; break;
+                case 'medium': speedMultiplier = 0.9; break;
+                case 'hard': speedMultiplier = 1.2; break;
+                case 'insane': speedMultiplier = 1.5; break;
+            }
+            
+            let computerPaddleCenter = computerPaddle.y + computerPaddle.height / 2;
+            let targetY = ball.y;
+            
+            if (ball.velocityX > 0) {
+                let timeToReach = (computerPaddle.x - ball.x) / ball.velocityX;
+                targetY = ball.y + (ball.velocityY * timeToReach);
+                
+                let imperfection = 0;
+                switch(difficulty) {
+                    case 'easy': imperfection = 40; break;
+                    case 'medium': imperfection = 25; break;
+                    case 'hard': imperfection = 10; break;
+                    case 'insane': imperfection = 5; break;
+                }
+                targetY += (Math.random() - 0.5) * imperfection;
+            }
+            
+            if (computerPaddleCenter < targetY - 10) {
+                computerPaddle.y += computerPaddle.speed * speedMultiplier;
+            } else if (computerPaddleCenter > targetY + 10) {
+                computerPaddle.y -= computerPaddle.speed * speedMultiplier;
+            }
+            
+            if (computerPaddle.y < 0) computerPaddle.y = 0;
+            if (computerPaddle.y + computerPaddle.height > canvas.height) {
+                computerPaddle.y = canvas.height - computerPaddle.height;
+            }
+        }
+        
         function resetBall() {
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
             
-            // Randomize the starting direction (always starts toward player who was just scored on)
-            ball.velocityX = (computerScore > playerScore ? 1 : -1) * ball.speed;
-            ball.velocityY = (Math.random() * 2 - 1) * ball.speed;
+            let serveToRight = (playerScore > computerScore);
+            let angle = (Math.random() * Math.PI / 2) - Math.PI / 4;
+            
+            ball.velocityX = serveToRight ? ball.speed * Math.cos(angle) : -ball.speed * Math.cos(angle);
+            ball.velocityY = ball.speed * Math.sin(angle);
+            
+            if (Math.abs(ball.velocityX) < 3) {
+                ball.velocityX = ball.velocityX < 0 ? -3 : 3;
+            }
         }
         
-        // Check if the game is over
         function checkGameOver() {
             if (playerScore >= winningScore || computerScore >= winningScore) {
                 gameRunning = false;
@@ -584,7 +762,6 @@
                 
                 showMessage(`${winner} Wins!`, message, "Play Again");
                 
-                // Update button to play again
                 messageButton.onclick = function() {
                     resetGame();
                     hideMessage();
@@ -593,36 +770,28 @@
             }
         }
         
-        // Reset the game
         function resetGame() {
             playerScore = 0;
             computerScore = 0;
             playerScoreElement.textContent = "0";
             computerScoreElement.textContent = "0";
             
-            // Reset paddles
             playerPaddle.y = canvas.height / 2 - paddleHeight / 2;
             computerPaddle.y = canvas.height / 2 - paddleHeight / 2;
             
-            // Reset ball
             resetBall();
             
-            // Update game state
             gameRunning = false;
             gamePaused = false;
             
-            // Update button text
             startBtn.textContent = "Start Game";
             pauseBtn.textContent = "Pause Game";
             
-            // Draw initial state
             draw();
         }
         
-        // Start the game
         function startGame() {
             if (gameRunning) {
-                // If already running, reset and restart
                 resetGame();
             }
             
@@ -631,17 +800,14 @@
             startBtn.textContent = "Restart Game";
             pauseBtn.textContent = "Pause Game";
             
-            // Apply difficulty settings
             applyDifficultySettings();
             
-            // Start the game loop
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
             gameLoop();
         }
         
-        // Pause the game
         function pauseGame() {
             if (!gameRunning) return;
             
@@ -661,11 +827,9 @@
             }
         }
         
-        // Apply difficulty settings
         function applyDifficultySettings() {
             difficulty = difficultySelect.value;
             
-            // Adjust ball speed based on difficulty
             switch(difficulty) {
                 case 'easy': ball.speed = 5; break;
                 case 'medium': ball.speed = 6; break;
@@ -673,11 +837,9 @@
                 case 'insane': ball.speed = 8; break;
             }
             
-            // Reset ball with new speed
             resetBall();
         }
         
-        // Show message overlay
         function showMessage(title, text, buttonText) {
             messageTitle.textContent = title;
             messageText.textContent = text;
@@ -685,41 +847,26 @@
             gameMessage.style.display = "block";
         }
         
-        // Hide message overlay
         function hideMessage() {
             gameMessage.style.display = "none";
         }
         
-        // Keyboard input handling
-        document.addEventListener('keydown', (e) => {
-            if (e.key in keys) {
-                keys[e.key] = true;
-            }
+        function gameLoop() {
+            update();
+            draw();
             
-            // Toggle pause with spacebar
-            if (e.key === ' ' && gameRunning) {
-                e.preventDefault();
-                pauseGame();
+            if (gameRunning && !gamePaused) {
+                animationFrameId = requestAnimationFrame(gameLoop);
             }
-        });
+        }
         
-        document.addEventListener('keyup', (e) => {
-            if (e.key in keys) {
-                keys[e.key] = false;
-            }
-        });
-        
-        // Button event listeners
+        // ===== INITIALIZE GAME =====
         startBtn.addEventListener('click', startGame);
-        
         pauseBtn.addEventListener('click', pauseGame);
-        
         resetBtn.addEventListener('click', resetGame);
         
         difficultySelect.addEventListener('change', function() {
-            if (gameRunning) {
-                applyDifficultySettings();
-            }
+            applyDifficultySettings();
         });
         
         messageButton.addEventListener('click', function() {
@@ -734,26 +881,20 @@
             }
         });
         
-        // Main game loop
-        function gameLoop() {
-            update();
-            draw();
-            
-            if (gameRunning && !gamePaused) {
-                animationFrameId = requestAnimationFrame(gameLoop);
-            }
-        }
-        
-        // Initialize the game
-        draw();
-        applyDifficultySettings();
-        
-        // Prevent spacebar from scrolling the page
+        // Prevent spacebar from scrolling
         window.addEventListener('keydown', function(e) {
             if(e.key === ' ' && e.target === document.body) {
                 e.preventDefault();
             }
         });
+        
+        // Prevent context menu on touch buttons
+        playerUpBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+        playerDownBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        // Initialize
+        draw();
+        applyDifficultySettings();
     </script>
 </body>
 </html>
