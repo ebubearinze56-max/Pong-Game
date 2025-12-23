@@ -318,6 +318,7 @@
         let computerScore = 0;
         let winningScore = 7;
         let difficulty = 'medium';
+        let animationFrameId = null;
         
         // Game objects
         const paddleWidth = 10;
@@ -340,7 +341,7 @@
             y: canvas.height / 2 - paddleHeight / 2,
             width: paddleWidth,
             height: paddleHeight,
-            speed: 5, // Will be adjusted by difficulty
+            speed: 5,
             color: '#ff6666'
         };
         
@@ -349,22 +350,25 @@
             x: canvas.width / 2,
             y: canvas.height / 2,
             size: ballSize,
-            speed: 6, // Will be adjusted by difficulty
+            speed: 6,
             velocityX: 5,
             velocityY: 5,
             color: '#ffffff'
         };
         
+        // Keyboard input handling
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            w: false,
+            W: false,
+            s: false,
+            S: false
+        };
+        
         // Draw a rectangle (used for paddles)
         function drawRect(x, y, width, height, color) {
             ctx.fillStyle = color;
-            ctx.fillRect(x, y, width, height);
-            
-            // Add a subtle gradient effect
-            const gradient = ctx.createLinearGradient(x, y, x + width, y + height);
-            gradient.addColorStop(0, color);
-            gradient.addColorStop(1, adjustColor(color, -30));
-            ctx.fillStyle = gradient;
             ctx.fillRect(x, y, width, height);
             
             // Add border
@@ -373,24 +377,12 @@
             ctx.strokeRect(x, y, width, height);
         }
         
-        // Draw the ball with a shadow effect
+        // Draw the ball
         function drawBall(x, y, size, color) {
-            // Ball shadow
-            ctx.beginPath();
-            ctx.arc(x + 2, y + 2, size, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fill();
-            
             // Main ball
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
-            const gradient = ctx.createRadialGradient(
-                x - size/3, y - size/3, 1,
-                x, y, size
-            );
-            gradient.addColorStop(0, '#ffffff');
-            gradient.addColorStop(1, color);
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = color;
             ctx.fill();
             
             // Ball highlight
@@ -423,11 +415,8 @@
         
         // Draw everything on the canvas
         function draw() {
-            // Clear the canvas with a gradient
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#0f3460');
-            gradient.addColorStop(1, '#1a1a2e');
-            ctx.fillStyle = gradient;
+            // Clear the canvas
+            ctx.fillStyle = '#0f3460';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Draw the center line
@@ -455,35 +444,42 @@
             // Ball collision with top and bottom walls
             if (ball.y + ball.size > canvas.height || ball.y - ball.size < 0) {
                 ball.velocityY = -ball.velocityY;
-                playBounceSound();
             }
             
-            // Determine which paddle is being hit
-            let playerPaddleHit = ball.x - ball.size < playerPaddle.x + playerPaddle.width;
-            let computerPaddleHit = ball.x + ball.size > computerPaddle.x;
-            
             // Ball collision with player paddle
-            if (playerPaddleHit && 
+            if (ball.x - ball.size < playerPaddle.x + playerPaddle.width &&
                 ball.y > playerPaddle.y && 
                 ball.y < playerPaddle.y + playerPaddle.height) {
                 
                 // Calculate bounce angle based on where the ball hit the paddle
                 let hitPoint = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (paddleHeight / 2);
-                ball.velocityX = Math.abs(ball.velocityX) * 1.05; // Increase speed slightly
-                ball.velocityY = hitPoint * 5; // Adjust vertical speed based on hit point
-                playPaddleSound();
+                let angle = hitPoint * (Math.PI / 4); // Maximum 45 degree angle
+                
+                // Calculate new velocity
+                let speed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
+                ball.velocityX = Math.cos(angle) * speed * 1.1; // Increase speed slightly
+                ball.velocityY = Math.sin(angle) * speed * 1.1;
+                
+                // Make sure the ball moves to the right
+                ball.velocityX = Math.abs(ball.velocityX);
             }
             
             // Ball collision with computer paddle
-            if (computerPaddleHit && 
+            if (ball.x + ball.size > computerPaddle.x &&
                 ball.y > computerPaddle.y && 
                 ball.y < computerPaddle.y + computerPaddle.height) {
                 
                 // Calculate bounce angle based on where the ball hit the paddle
                 let hitPoint = (ball.y - (computerPaddle.y + computerPaddle.height / 2)) / (paddleHeight / 2);
-                ball.velocityX = -Math.abs(ball.velocityX) * 1.05; // Increase speed slightly
-                ball.velocityY = hitPoint * 5; // Adjust vertical speed based on hit point
-                playPaddleSound();
+                let angle = hitPoint * (Math.PI / 4); // Maximum 45 degree angle
+                
+                // Calculate new velocity
+                let speed = Math.sqrt(ball.velocityX * ball.velocityX + ball.velocityY * ball.velocityY);
+                ball.velocityX = -Math.cos(angle) * speed * 1.1; // Increase speed slightly
+                ball.velocityY = Math.sin(angle) * speed * 1.1;
+                
+                // Make sure the ball moves to the left
+                ball.velocityX = -Math.abs(ball.velocityX);
             }
             
             // Update computer paddle based on difficulty
@@ -498,14 +494,12 @@
                 computerScore++;
                 computerScoreElement.textContent = computerScore;
                 resetBall();
-                playScoreSound();
                 checkGameOver();
             } else if (ball.x + ball.size > canvas.width) {
                 // Player scores
                 playerScore++;
                 playerScoreElement.textContent = playerScore;
                 resetBall();
-                playScoreSound();
                 checkGameOver();
             }
         }
@@ -521,25 +515,22 @@
                 case 'insane': speedMultiplier = 1.6; break;
             }
             
-            // Computer AI - follow the ball with some imperfection based on difficulty
-            let imperfection = 0;
+            // Simple AI - computer follows the ball
+            let computerPaddleCenter = computerPaddle.y + computerPaddle.height / 2;
+            
+            // Add some delay based on difficulty to make it beatable
+            let reactionDelay = 0;
             switch(difficulty) {
-                case 'easy': imperfection = 0.4; break;
-                case 'medium': imperfection = 0.2; break;
-                case 'hard': imperfection = 0.1; break;
-                case 'insane': imperfection = 0.05; break;
+                case 'easy': reactionDelay = 0.3; break;
+                case 'medium': reactionDelay = 0.2; break;
+                case 'hard': reactionDelay = 0.1; break;
+                case 'insane': reactionDelay = 0.05; break;
             }
             
-            // Calculate where the computer paddle should move
-            let targetY = ball.y - (computerPaddle.height / 2);
-            
-            // Add some imperfection to make it beatable
-            targetY += (Math.random() - 0.5) * imperfection * 100;
-            
-            // Move the computer paddle toward the target
-            if (computerPaddle.y + computerPaddle.height / 2 < targetY) {
+            // Move computer paddle toward the ball
+            if (computerPaddleCenter < ball.y - reactionDelay * 100) {
                 computerPaddle.y += computerPaddle.speed * speedMultiplier;
-            } else {
+            } else if (computerPaddleCenter > ball.y + reactionDelay * 100) {
                 computerPaddle.y -= computerPaddle.speed * speedMultiplier;
             }
             
@@ -572,8 +563,8 @@
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2;
             
-            // Randomize the starting direction
-            ball.velocityX = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+            // Randomize the starting direction (always starts toward player who was just scored on)
+            ball.velocityX = (computerScore > playerScore ? 1 : -1) * ball.speed;
             ball.velocityY = (Math.random() * 2 - 1) * ball.speed;
         }
         
@@ -581,6 +572,10 @@
         function checkGameOver() {
             if (playerScore >= winningScore || computerScore >= winningScore) {
                 gameRunning = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
                 
                 let winner = playerScore >= winningScore ? "Player" : "Computer";
                 let message = playerScore >= winningScore 
@@ -618,20 +613,31 @@
             
             // Update button text
             startBtn.textContent = "Start Game";
+            pauseBtn.textContent = "Pause Game";
+            
+            // Draw initial state
+            draw();
         }
         
         // Start the game
         function startGame() {
-            if (gameRunning) return;
+            if (gameRunning) {
+                // If already running, reset and restart
+                resetGame();
+            }
             
             gameRunning = true;
             gamePaused = false;
             startBtn.textContent = "Restart Game";
+            pauseBtn.textContent = "Pause Game";
             
             // Apply difficulty settings
             applyDifficultySettings();
             
             // Start the game loop
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
             gameLoop();
         }
         
@@ -644,9 +650,14 @@
             if (gamePaused) {
                 showMessage("Game Paused", "Press SPACE or click Continue to resume", "Continue");
                 pauseBtn.textContent = "Resume Game";
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
             } else {
                 hideMessage();
                 pauseBtn.textContent = "Pause Game";
+                gameLoop();
             }
         }
         
@@ -680,10 +691,10 @@
         }
         
         // Keyboard input handling
-        const keys = {};
-        
         document.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
+            if (e.key in keys) {
+                keys[e.key] = true;
+            }
             
             // Toggle pause with spacebar
             if (e.key === ' ' && gameRunning) {
@@ -693,7 +704,9 @@
         });
         
         document.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
+            if (e.key in keys) {
+                keys[e.key] = false;
+            }
         });
         
         // Button event listeners
@@ -704,7 +717,9 @@
         resetBtn.addEventListener('click', resetGame);
         
         difficultySelect.addEventListener('change', function() {
-            applyDifficultySettings();
+            if (gameRunning) {
+                applyDifficultySettings();
+            }
         });
         
         messageButton.addEventListener('click', function() {
@@ -719,110 +734,26 @@
             }
         });
         
-        // Helper function to adjust color brightness
-        function adjustColor(color, amount) {
-            let usePound = false;
-            
-            if (color[0] === "#") {
-                color = color.slice(1);
-                usePound = true;
-            }
-            
-            const num = parseInt(color, 16);
-            let r = (num >> 16) + amount;
-            let g = ((num >> 8) & 0x00FF) + amount;
-            let b = (num & 0x0000FF) + amount;
-            
-            r = Math.min(Math.max(0, r), 255);
-            g = Math.min(Math.max(0, g), 255);
-            b = Math.min(Math.max(0, b), 255);
-            
-            return (usePound ? "#" : "") + (b | (g << 8) | (r << 16)).toString(16).padStart(6, '0');
-        }
-        
-        // Simple sound effects using the Web Audio API
-        function playBounceSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 300;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.1);
-            } catch (e) {
-                // Audio not supported or blocked by browser
-                console.log("Audio not supported");
-            }
-        }
-        
-        function playPaddleSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 600;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
-            } catch (e) {
-                // Audio not supported or blocked by browser
-                console.log("Audio not supported");
-            }
-        }
-        
-        function playScoreSound() {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.5);
-            } catch (e) {
-                // Audio not supported or blocked by browser
-                console.log("Audio not supported");
-            }
-        }
-        
         // Main game loop
         function gameLoop() {
             update();
             draw();
             
-            if (gameRunning) {
-                requestAnimationFrame(gameLoop);
+            if (gameRunning && !gamePaused) {
+                animationFrameId = requestAnimationFrame(gameLoop);
             }
         }
         
         // Initialize the game
         draw();
         applyDifficultySettings();
+        
+        // Prevent spacebar from scrolling the page
+        window.addEventListener('keydown', function(e) {
+            if(e.key === ' ' && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
 </html>
