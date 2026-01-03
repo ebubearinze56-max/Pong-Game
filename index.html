@@ -4,31 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fun Games</title>
-    <link rel="stylesheet" href="style.css">
     
-    <!-- ========== SUPABASE LOGIN SYSTEM - ADD YOUR CREDENTIALS BELOW ========== -->
+    <!-- Simple styles for the page -->
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #f0f0f0; }
+        .game-area { background: white; padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 800px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .login-box { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .login-btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .github-btn { background: #24292e; color: white; }
+        .logout-btn { background: #dc3545; color: white; }
+    </style>
+    
+    <!-- ========== SUPABASE LOGIN SYSTEM ========== -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
-        // 🔑 PASTE YOUR SUPABASE CREDENTIALS HERE:
-        const supabaseUrl = 'https://nblnxqzaitbhqtgjcxkh.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ibG54cXphaXRiaHF0Z2pjeGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NDU5MTEsImV4cCI6MjA4MzAyMTkxMX0.HZ0rMHJKWAVS38fnHFE70f6PIP4ohxnxMFIJNaZlG1E';
-        // Example: const supabaseUrl = 'https://abc123.supabase.co';
-        // Example: const supabaseKey = 'eyJhbGciOiJIUzI1NiIs...';
+        // 🔑 STEP 1: PASTE YOUR CREDENTIALS HERE!
+        // Get these from Supabase: Settings -> API Keys
+        const supabaseUrl = 'PASTE_YOUR_SUPABASE_PROJECT_URL_HERE'; // e.g., https://abc123.supabase.co
+        const supabaseKey = 'PASTE_YOUR_SUPABASE_ANON_PUBLIC_KEY_HERE'; // e.g., eyJhbGciOiJIUzI1NiIs...
         
+        // 🔧 STEP 2: This line creates the connection (ONLY ONE TIME!)
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
         
-        // Function for GitHub Login
+        // Function for the LOGIN button
         async function handleGitHubLogin() {
+            console.log("Login button clicked!");
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'github',
             });
             if (error) {
                 console.error('Login error:', error.message);
-                alert('Login failed! Please try again.');
+                alert('Login failed. Check Console (F12) for details.');
+            } else {
+                console.log("GitHub pop-up should open...");
             }
         }
         
-        // Function for Logout
+        // Function for the LOGOUT button
         async function handleLogout() {
             const { error } = await supabase.auth.signOut();
             if (error) {
@@ -39,80 +51,61 @@
             }
         }
         
-        // Check if user is already logged in
-        async function checkUser() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                console.log('User is logged in:', user.email);
-                // You can add welcome message here later
+        // Check login status when page loads
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                console.log('Already logged in as:', session.user.email);
+                document.getElementById('login-status').innerText = "Logged in! 🎉";
             }
-        }
-        checkUser();
+        });
     </script>
-    <!-- ========== END OF SUPABASE CODE ========== -->
-    
-    <!-- Your other CSS links or styles here -->
-    <style>
-        /* Your existing CSS styles remain here */
-        .login-box {
-            text-align: center;
-            margin: 20px auto;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            max-width: 400px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .login-btn {
-            padding: 12px 25px;
-            background: #24292e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        .logout-btn {
-            background: #dc3545;
-        }
-    </style>
+    <!-- ========== END SUPABASE CODE ========== -->
 </head>
 <body>
-    <!-- ========== LOGIN BUTTONS SECTION ========== -->
+    <h1>🎮 Welcome to Fun Games! 🎮</h1>
+    
+    <!-- Login Box -->
     <div class="login-box">
-        <h2>Welcome to Fun Games! 🎮</h2>
-        <p>Log in with GitHub to save your scores and progress!</p>
-        <button class="login-btn" onclick="handleGitHubLogin()">
+        <h3>Login to Save Your Scores</h3>
+        <p id="login-status">You are not logged in.</p>
+        <button class="login-btn github-btn" onclick="handleGitHubLogin()">
             🐙 Login with GitHub
         </button>
         <button class="login-btn logout-btn" onclick="handleLogout()">
             🚪 Logout
         </button>
-        <p style="margin-top: 15px; font-size: 14px; color: #666;">
-            Your game progress will be saved automatically when logged in.
+        <p style="font-size: 14px; color: #666; margin-top: 10px;">
+            After login, you can close the GitHub pop-up and return here.
         </p>
     </div>
-    <!-- ========== END LOGIN SECTION ========== -->
     
-    <!-- ========== YOUR EXISTING GAME CONTENT GOES HERE ========== -->
-    <!-- 
-    DO NOT DELETE ANYTHING BELOW THIS COMMENT
-    All your existing game HTML, buttons, canvases, and content should remain here
-    The login buttons above will work with all your existing games
-    -->
-    
-    <h1>Your Fun Games Collection</h1>
-    
-    <!-- Your existing game containers, buttons, and elements stay here -->
-    <div id="game-container">
-        <!-- ALL YOUR EXISTING GAME CODE IS HERE AND WILL CONTINUE TO WORK -->
+    <!-- Your Games Area -->
+    <div class="game-area">
+        <h2>Your Games</h2>
+        <p>All your existing games should be displayed below. The login buttons above will work with them.</p>
+        <hr>
+        <!-- 
+        ⬇️⬇️⬇️ YOUR EXISTING GAME CODE GOES HERE ⬇️⬇️⬇️
+        Paste all your game's HTML, buttons, and elements right here.
+        Do not paste any <script> tags that create another 'supabase' variable.
+        -->
+        
+        <p><em>Your Pong Game and other games will appear here.</em></p>
+        
+        <!-- 
+        ⬆️⬆️⬆️ YOUR EXISTING GAME CODE STAYS ABOVE ⬆️⬆️⬆️
+        -->
     </div>
     
-    <!-- Your existing JavaScript game files -->
-    <script src="script.js"></script>
-    <script src="game.js"></script>
-    <!-- Any other scripts you have -->
+    <!-- Your game's JavaScript -->
+    <!-- 
+    ⚠️ Only link JavaScript files that are for your GAME LOGIC.
+    Do NOT link any file that also tries to connect to Supabase.
+    Example: <script src="pong-game-logic.js"></script> is fine.
+    -->
     
+    <footer style="margin-top: 30px; color: #777; font-size: 14px;">
+        <p>Fun Games Website | Now with GitHub Login!</p>
+    </footer>
 </body>
 </html>
